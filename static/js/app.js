@@ -1,6 +1,7 @@
 /**
  * BigQuery Release Notes App - JavaScript Optimizado
- * Implementación Vanilla JS con delegación de eventos, debounce y compositor sincronizado.
+ * Implementación Vanilla JS con soporte multi-tema (Claro, Oscuro, Drácula),
+ * delegación de eventos, debounce y compositor para X / Twitter.
  */
 
 // Estado global de la aplicación
@@ -11,11 +12,13 @@ const state = {
   activeCategory: 'ALL',
   searchQuery: '',
   viewMode: 'timeline',
+  currentTheme: localStorage.getItem('bq_theme') || 'dark',
   isLoading: false,
 };
 
 // Referencias del DOM
 const elements = {
+  themeButtons: document.querySelectorAll('[data-set-theme]'),
   refreshBtn: document.getElementById('refreshBtn'),
   lastUpdatedText: document.getElementById('lastUpdatedText'),
   totalUpdatesBadge: document.getElementById('totalUpdatesBadge'),
@@ -53,6 +56,23 @@ const elements = {
 };
 
 /**
+ * Gestor de Temas Visuales (Claro, Oscuro, Drácula)
+ */
+function applyTheme(themeName) {
+  const validThemes = ['light', 'dark', 'dracula'];
+  const theme = validThemes.includes(themeName) ? themeName : 'dark';
+
+  state.currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('bq_theme', theme);
+
+  // Actualizar botones de tema en la UI
+  elements.themeButtons.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.setTheme === theme);
+  });
+}
+
+/**
  * Utilidad: Debounce para optimizar búsquedas frecuentes
  */
 function debounce(fn, delay = 180) {
@@ -77,7 +97,7 @@ function showToast(message, type = 'success') {
     toast.style.transform = 'translateY(12px)';
     toast.style.transition = 'all 0.25s ease';
     setTimeout(() => toast.remove(), 250);
-  }, 3000);
+  }, 2800);
 }
 
 /**
@@ -116,7 +136,7 @@ async function loadFeed(forceRefresh = false) {
     renderFeed();
 
     if (forceRefresh) {
-      showToast('¡Feed de BigQuery actualizado con éxito!', 'success');
+      showToast('Feed de BigQuery actualizado con éxito', 'success');
     }
   } catch (err) {
     console.error('Error al cargar feed:', err);
@@ -170,11 +190,9 @@ function getFilteredItems() {
   const cat = state.activeCategory.toUpperCase();
 
   return state.allUpdates.filter(item => {
-    // Filtro por categoría
     if (cat !== 'ALL' && item.category.toUpperCase() !== cat) {
       return false;
     }
-    // Filtro por texto
     if (query) {
       const matchText = (item.plain_text || '').toLowerCase();
       const matchDate = (item.date || '').toLowerCase();
@@ -194,7 +212,6 @@ function renderFeed() {
   const filteredItems = getFilteredItems();
   const filteredIds = new Set(filteredItems.map(item => item.id));
 
-  // Banner de alerta de filtro
   const isFiltering = state.activeCategory !== 'ALL' || state.searchQuery.trim() !== '';
   if (isFiltering) {
     elements.filterAlert.style.display = 'flex';
@@ -203,7 +220,6 @@ function renderFeed() {
     elements.filterAlert.style.display = 'none';
   }
 
-  // Estado vacío
   if (filteredItems.length === 0) {
     elements.feedList.style.display = 'none';
     elements.emptyState.style.display = 'block';
@@ -302,26 +318,21 @@ function getCategoryBadgeClass(catName = '') {
 function selectUpdate(item) {
   state.selectedUpdate = item;
 
-  // Actualiza clase seleccionada en el DOM
   document.querySelectorAll('.update-card').forEach(card => {
     card.classList.toggle('selected', card.dataset.updateId === item.id);
   });
 
-  // Mostrar panel activo del compositor
   elements.composerEmpty.style.display = 'none';
   elements.composerActive.style.display = 'block';
   elements.composerColumn.classList.add('drawer-open');
 
-  // Metadatos
   elements.selectedCatBadge.textContent = item.category;
   elements.selectedCatBadge.className = `selected-cat-pill ${getCategoryBadgeClass(item.category)}`;
   elements.selectedDateText.textContent = item.date;
   elements.sourceExcerptText.textContent = item.plain_text;
 
-  // Generar borrador de post optimizado
   generateTweetDraft(item);
 
-  // Scroll suave en móviles
   if (window.innerWidth <= 1024) {
     elements.composerColumn.scrollIntoView({ behavior: 'smooth' });
   }
@@ -336,7 +347,6 @@ function generateTweetDraft(item) {
   const hashtags = '#BigQuery #GoogleCloud';
 
   const prefix = `BigQuery ${item.category} (${dateStr}): `;
-  // En X, cualquier URL cuenta como 23 caracteres
   const urlEquivalentLength = 23;
   const reservedLen = prefix.length + hashtags.length + urlEquivalentLength + 6;
   const maxSnippetLen = Math.max(50, 280 - reservedLen);
@@ -358,7 +368,6 @@ function syncMockupAndCounter() {
   const text = elements.tweetTextarea.value;
   elements.mockupTweetBody.textContent = text || '...';
 
-  // Cálculo de longitud para Twitter
   const count = text.length;
   elements.charCount.textContent = count;
 
@@ -406,7 +415,7 @@ async function copyTweetToClipboard() {
       elements.tweetTextarea.select();
       document.execCommand('copy');
     }
-    showToast('¡Tweet copiado al portapapeles!', 'success');
+    showToast('Tweet copiado al portapapeles', 'success');
   } catch {
     showToast('No se pudo copiar el texto', 'error');
   }
@@ -428,9 +437,18 @@ function escapeHtml(str = '') {
    Delegación y Controladores de Eventos
    ========================================================== */
 
-// Delegación de eventos en feedList (ultra rápido y sin fugas de memoria)
+// Selector de Tema Visual (Claro / Oscuro / Drácula)
+elements.themeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const theme = btn.dataset.setTheme;
+    applyTheme(theme);
+    const themeLabels = { light: 'Claro', dark: 'Oscuro', dracula: 'Drácula' };
+    showToast(`Tema cambiado a: ${themeLabels[theme] || theme}`, 'success');
+  });
+});
+
+// Delegación de eventos en feedList
 elements.feedList.addEventListener('click', (e) => {
-  // Evitar interceptar links dentro del texto
   if (e.target.tagName === 'A') return;
 
   const card = e.target.closest('.update-card');
@@ -442,7 +460,6 @@ elements.feedList.addEventListener('click', (e) => {
 
   selectUpdate(foundItem);
 
-  // Si se hizo click directamente en el botón "Twittear"
   const isTweetBtn = e.target.closest('[data-action="tweet"]');
   if (isTweetBtn) {
     elements.tweetTextarea.focus();
@@ -571,4 +588,7 @@ elements.closeComposerBtn.addEventListener('click', () => {
 });
 
 // Inicialización
-document.addEventListener('DOMContentLoaded', () => loadFeed(false));
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(state.currentTheme);
+  loadFeed(false);
+});
