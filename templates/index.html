@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Visualizador interactivo de notas de versión de Google Cloud BigQuery con compositor directo para Twitter / X.">
+  <title>BigQuery Release Notes &amp; Tweet Broadcaster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Barra de Navegación Superior -->
+  <header class="app-header">
+    <div class="header-inner container">
+      <div class="brand-group">
+        <div class="logo-wrapper">
+          <svg class="bq-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="#1A73E8"/>
+            <path d="M24 10C16.268 10 10 16.268 10 24C10 31.732 16.268 38 24 38C27.42 38 30.56 36.77 33.02 34.72L37.15 38.85L39.98 36.02L35.91 31.95C37.24 29.62 38 26.91 38 24C38 16.268 31.732 10 24 10ZM24 14C29.523 14 34 18.477 34 24C34 29.523 29.523 34 24 34C18.477 34 14 29.523 14 24C14 18.477 18.477 14 24 14Z" fill="white"/>
+            <circle cx="21" cy="21" r="2.5" fill="#A8C7FA"/>
+            <circle cx="28" cy="21" r="2.5" fill="#34A853"/>
+            <circle cx="21" cy="28" r="2.5" fill="#FBBC04"/>
+            <circle cx="28" cy="28" r="2.5" fill="#EA4335"/>
+          </svg>
+        </div>
+        <div class="title-meta">
+          <div class="brand-title-row">
+            <h1>BigQuery Release Notes</h1>
+            <span class="status-indicator" title="Conexión en vivo con Google Cloud">
+              <span class="status-pulse"></span>
+              En vivo
+            </span>
+          </div>
+          <p class="subtitle">Feed oficial de novedades de Google Cloud &amp; Emisor para X / Twitter</p>
+        </div>
+      </div>
+
+      <!-- Acciones de Cabecera: Refresco y Métricas -->
+      <div class="header-actions">
+        <div class="feed-sync-info">
+          <span class="sync-time" id="lastUpdatedText">Sincronizando feed...</span>
+          <span class="sync-total" id="totalUpdatesBadge">-- actualizaciones</span>
+        </div>
+
+        <button id="refreshBtn" class="btn btn-refresh" title="Actualizar feed desde Google Cloud">
+          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+          </svg>
+          <span class="btn-text">Actualizar Feed</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Panel de Estadísticas / KPI Metrics -->
+  <section class="stats-strip">
+    <div class="container stats-inner" id="statsContainer">
+      <div class="stat-card" data-cat="Feature">
+        <div class="stat-icon-wrap stat-feature">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value" id="statFeatures">--</span>
+          <span class="stat-label">Features</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-cat="Change">
+        <div class="stat-icon-wrap stat-change">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 3 21 3 21 8"></polyline>
+            <line x1="4" y1="20" x2="21" y2="3"></line>
+            <polyline points="21 16 21 21 16 21"></polyline>
+            <line x1="15" y1="15" x2="21" y2="21"></line>
+            <line x1="4" y1="4" x2="9" y2="9"></line>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value" id="statChanges">--</span>
+          <span class="stat-label">Cambios</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-cat="Announcement">
+        <div class="stat-icon-wrap stat-announcement">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value" id="statAnnouncements">--</span>
+          <span class="stat-label">Anuncios</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-cat="Fixed">
+        <div class="stat-icon-wrap stat-fixed">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polyline points="9 12 11 14 15 10"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value" id="statFixed">--</span>
+          <span class="stat-label">Corregidos</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-cat="Deprecated">
+        <div class="stat-icon-wrap stat-deprecated">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <span class="stat-value" id="statDeprecated">--</span>
+          <span class="stat-label">Deprecados</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <section class="toolbar-section">
+    <div class="container toolbar-inner">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Buscar por palabra clave (ej. Gemini, SQL, Vector, AI, Transfer)..." aria-label="Buscar actualizaciones">
+        <kbd class="search-kbd">/</kbd>
+        <button id="clearSearchBtn" class="clear-btn" style="display: none;" title="Limpiar búsqueda">&times;</button>
+      </div>
+
+      <!-- Selector de Vista -->
+      <div class="view-switch">
+        <button class="view-btn active" data-view="timeline" title="Vista Cronológica por Fecha">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="3" x2="12" y2="21"/>
+            <circle cx="12" cy="7" r="3"/>
+            <circle cx="12" cy="17" r="3"/>
+          </svg>
+          Cronología
+        </button>
+        <button class="view-btn" data-view="cards" title="Vista en Tarjetas Individuales">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          Tarjetas
+        </button>
+      </div>
+    </div>
+
+    <!-- Chips de Categoría -->
+    <div class="container category-bar">
+      <span class="filter-label">Categorías:</span>
+      <div class="chips-list" id="categoryChips">
+        <button class="chip active" data-category="ALL">Todas</button>
+        <button class="chip" data-category="Feature">✨ Features</button>
+        <button class="chip" data-category="Change">🔄 Cambios</button>
+        <button class="chip" data-category="Announcement">📢 Anuncios</button>
+        <button class="chip" data-category="Fixed">🛡️ Corregidos</button>
+        <button class="chip" data-category="Security">🔒 Seguridad</button>
+        <button class="chip" data-category="Deprecated">⚠️ Deprecados</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contenedor Principal -->
+  <main class="main-content container">
+    <div class="content-grid" id="layoutGrid">
+
+      <!-- Columna del Feed -->
+      <div class="feed-column">
+        <!-- Aviso de Filtro Activo -->
+        <div id="filterAlert" class="filter-alert" style="display: none;">
+          <span id="filterAlertText">Mostrando resultados filtrados</span>
+          <button id="resetFilterBtn" class="btn-link">Restablecer filtros</button>
+        </div>
+
+        <!-- Skeleton Loading Animado -->
+        <div id="loadingSkeleton" class="skeleton-wrapper">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+
+        <!-- Estado de Error -->
+        <div id="errorState" class="state-card error-card" style="display: none;">
+          <div class="state-icon">⚠️</div>
+          <h3>Error de Conexión</h3>
+          <p id="errorMessage">No fue posible obtener las notas de versión de Google Cloud.</p>
+          <button id="retryBtn" class="btn btn-secondary">Reintentar</button>
+        </div>
+
+        <!-- Estado Vacío -->
+        <div id="emptyState" class="state-card" style="display: none;">
+          <div class="state-icon">🔍</div>
+          <h3>No se encontraron resultados</h3>
+          <p>No hay notas de versión que coincidan con los filtros o término de búsqueda ingresado.</p>
+          <button id="clearAllFiltersBtn" class="btn btn-secondary">Limpiar Filtros</button>
+        </div>
+
+        <!-- Lista de Actualizaciones -->
+        <div id="feedList" class="feed-list timeline-mode"></div>
+      </div>
+
+      <!-- Barra Lateral: Compositor de Tweets & Previsualización -->
+      <aside class="composer-column" id="composerColumn">
+        <div class="composer-card sticky-card" id="composerCard">
+          
+          <div class="composer-header">
+            <div class="composer-title-wrap">
+              <svg class="x-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              <h2>Compositor para X / Twitter</h2>
+            </div>
+            <button id="closeComposerBtn" class="icon-btn" title="Cerrar panel">&times;</button>
+          </div>
+
+          <!-- Estado Vacío del Compositor -->
+          <div id="composerEmpty" class="composer-empty-state">
+            <div class="empty-icon-bubble">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
+              </svg>
+            </div>
+            <h4>Selecciona cualquier actualización</h4>
+            <p>Haz clic en el botón <strong>Twittear</strong> o selecciona cualquier tarjeta a la izquierda para redactar y publicar tu post.</p>
+          </div>
+
+          <!-- Compositor Activo -->
+          <div id="composerActive" class="composer-active-state" style="display: none;">
+            
+            <div class="selected-meta-bar">
+              <span class="selected-cat-pill" id="selectedCatBadge">Feature</span>
+              <span class="selected-date-text" id="selectedDateText">Fecha</span>
+            </div>
+
+            <!-- Excerpt Original de GCP -->
+            <div class="source-preview">
+              <div class="source-preview-title">Contenido original extraído:</div>
+              <div class="source-preview-text" id="sourceExcerptText">...</div>
+            </div>
+
+            <!-- Textarea Editable -->
+            <div class="tweet-input-wrap">
+              <label for="tweetTextarea" class="input-label">Edita el texto del Tweet:</label>
+              <textarea id="tweetTextarea" rows="5" placeholder="¿Qué está pasando en BigQuery?..."></textarea>
+            </div>
+
+            <!-- Contador de Caracteres Visual -->
+            <div class="char-count-bar">
+              <div class="char-info">
+                <span id="charCount">0</span> / <span id="maxCharCount">280</span> caracteres
+              </div>
+              <div class="char-meter">
+                <div id="charMeterFill" class="meter-fill"></div>
+              </div>
+            </div>
+
+            <!-- Hashtags Rápidos -->
+            <div class="hashtag-helper">
+              <span class="helper-label">Hashtags recomendados:</span>
+              <div class="tag-chips">
+                <button type="button" class="tag-chip" data-tag="#BigQuery">#BigQuery</button>
+                <button type="button" class="tag-chip" data-tag="#GoogleCloud">#GoogleCloud</button>
+                <button type="button" class="tag-chip" data-tag="#DataEngineering">#DataEngineering</button>
+                <button type="button" class="tag-chip" data-tag="#SQL">#SQL</button>
+                <button type="button" class="tag-chip" data-tag="#GenAI">#GenAI</button>
+              </div>
+            </div>
+
+            <!-- Vista Previa de Post en X -->
+            <div class="tweet-mockup-card">
+              <div class="mockup-header">
+                <div class="mockup-avatar">BQ</div>
+                <div class="mockup-user-info">
+                  <span class="mockup-name">BigQuery News</span>
+                  <span class="mockup-handle">@BigQueryUpdates · ahora</span>
+                </div>
+              </div>
+              <div class="mockup-body" id="mockupTweetBody">...</div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="composer-actions">
+              <button id="tweetNowBtn" class="btn btn-x-tweet">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Publicar en X
+              </button>
+
+              <button id="copyTweetBtn" class="btn btn-outline" title="Copiar texto al portapapeles">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copiar
+              </button>
+            </div>
+
+            <p class="composer-footnote">Abre directamente el Web Intent oficial de Twitter con tu texto pre-cargado.</p>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Contenedor de Alertas Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
